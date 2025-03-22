@@ -135,3 +135,21 @@
   background: #ccc;
   cursor: not-allowed;
 }
+
+.obra-card {
+  width: 100%;
+  max-width: 320px;
+}
+
+.btn-archive-dossier {
+  color: white;
+  background-color: #7e0910;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 25px;
+  margin-top: 8px;
+}
+
+.btn-archive-dossier:hover {
+  background-color: #8d111a;
+}

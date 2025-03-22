@@ -1,261 +1,280 @@
 <?php
-/*
-Plugin Name: CPT Obras
-Description: Gestión de obras de ópera con campos personalizados + Elementor
-Version: 1.2
-Author: Progresi
-*/
+/**
+ * Plugin Name: Gestión de Obras Teatrales
+ * Description: Sistema completo para gestión de obras con taxonomías y plantillas optimizadas
+ * Version: 2.1
+ * Author: Progresi
+ * Text Domain: progresi-obras
+ * License: GPLv2 or later
+ */
 
-// 1. Cargar Composer Autoloader para Carbon Fields
+namespace Progresi\Obras;
+
+defined('ABSPATH') || exit;
+
+// Autoload Composer (si usas Carbon Fields via Composer)
 require_once __DIR__ . '/vendor/autoload.php';
 
+use Carbon_Fields\Carbon_Fields;
 use Carbon_Fields\Container;
 use Carbon_Fields\Field;
 
-// 2. Registrar CPT y Campos
-add_action('init', 'registrar_cpt_obra');
-add_action('carbon_fields_register_fields', 'registrar_campos_obra');
-add_action('after_setup_theme', 'cargar_carbon_fields');
-
-function cargar_carbon_fields() {
-    \Carbon_Fields\Carbon_Fields::boot();
-}
-
-function registrar_cpt_obra() {
-    register_post_type('obra', [
-        'labels' => [
-            'name' => __('Obras'),
-            'singular_name' => __('Obra'),
-        ],
-        'public' => true,
-        'has_archive' => true,
-        'rewrite' => ['slug' => 'obras'],
-        'supports' => ['title', 'thumbnail', 'elementor'],
-        'menu_icon' => 'dashicons-format-audio',
-        'show_in_rest' => true,
-    ]);
-}
-
-function registrar_campos_obra() {
-    Container::make('post_meta', 'Detalles de la Obra')
-        ->where('post_type', '=', 'obra')
-        ->add_fields([
-            Field::make('text', 'genero', 'Género')->set_required(true),
-            Field::make('text', 'autor', 'Autor')->set_required(true),
-            Field::make('date', 'fecha_estreno', 'Fecha de Estreno')->set_storage_format('Y-m-d'),
-            Field::make('date', 'fecha_finalizacion', 'Fecha de Finalización')->set_storage_format('Y-m-d'),
-            Field::make('complex', 'ficha_artistica', 'Ficha Artística')
-                ->add_fields([
-                    Field::make('text', 'rol', 'Rol'),
-                    Field::make('text', 'nombre', 'Nombre'),
-                ])
-                ->set_layout('tabbed-horizontal'),
-            Field::make('media_gallery', 'galeria_fotos', 'Galería de Fotos')->set_type('image'),
-            Field::make('complex', 'videos', 'Videos')
-                ->add_fields([
-                    Field::make('text', 'titulo_video', 'Título'),
-                    Field::make('oembed', 'url_video', 'URL del Video'),
-                ]),
-            // Campos modificados para protección PDF
-            Field::make('complex', 'dossier_archivos', 'Archivos del Dossier')
-                ->add_fields([
-                    Field::make('file', 'archivo', 'Archivo PDF')
-                        ->set_type('application/pdf')
-                        ->set_required(true)
-                ])
-                ->set_layout('tabbed-horizontal')
-                ->set_header_template('
-                    <% if (archivo) { %>
-                        Archivo: <%= archivo.split("/").pop() %>
-                    <% } %>
-                '),
-            Field::make('text', 'dossier_clave', 'Contraseña de acceso')
-                ->set_attribute('type', 'password')
-                ->help_text('Clave única para todos los archivos del dossier'),
-            Field::make('rich_text', 'sinopsis', 'Sinopsis')->set_required(true),
-            Field::make('rich_text', 'presentacion', 'Presentación'),
-        ]);
-}
-
-// 3. Sistema de protección PDF
-add_action('template_redirect', 'manejar_descarga_protegida');
-add_action('wp_ajax_verificar_clave_dossier', 'verificar_clave_dossier');
-add_action('wp_ajax_nopriv_verificar_clave_dossier', 'verificar_clave_dossier');
-
-function manejar_descarga_protegida() {
-    if (isset($_GET['descargar_dossier']) && isset($_GET['post_id'])) {
-        $post_id = intval($_GET['post_id']);
-        $clave = sanitize_text_field($_GET['clave'] ?? '');
-
-        if (validar_clave_dossier($post_id, $clave)) {
-            $file_id = carbon_get_post_meta($post_id, 'dossier');
-            $file_path = get_attached_file($file_id);
-
-            if ($file_path && file_exists($file_path)) {
-                header('Content-Description: File Transfer');
-                header('Content-Type: application/pdf');
-                header('Content-Disposition: attachment; filename="' . basename($file_path) . '"');
-                header('Expires: 0');
-                header('Cache-Control: must-revalidate');
-                header('Pragma: public');
-                header('Content-Length: ' . filesize($file_path));
-                readfile($file_path);
-                exit;
+class Plugin {
+    public function __construct() {
+        add_action('plugins_loaded', [$this, 'verificar_dependencias']);
+        add_action('init', [$this, 'registrar_estructura']);
+        add_action('carbon_fields_register_fields', [$this, 'registrar_campos']);
+        add_filter('template_include', [$this, 'manejar_templates']);
+        add_action('wp_enqueue_scripts', [$this, 'cargar_recursos']);
+        add_action('template_redirect', [$this, 'manejar_descargas_protegidas']); // Añade este hook
+        add_action('wp_ajax_verificar_clave_dossier', [$this, 'verificar_clave_dossier']);
+        add_action('wp_ajax_nopriv_verificar_clave_dossier', [$this, 'verificar_clave_dossier']);
+    }
+    
+    public function manejar_descargas_protegidas() {
+        if (isset($_GET['descargar_dossier'], $_GET['post_id'])) {
+            $post_id = intval($_GET['post_id']);
+            $clave = sanitize_text_field($_GET['clave'] ?? '');
+    
+            // Verificar si la clave es válida
+            $clave_valida = $this->validar_clave_dossier($post_id, $clave);
+            $dossier_archivos = carbon_get_post_meta($post_id, 'dossier_archivos');
+    
+            if ($clave_valida && !empty($dossier_archivos)) {
+                // Obtener el primer archivo del dossier (asumiendo que solo hay uno)
+                $dossier = $dossier_archivos[0];
+                $file_id = $dossier['archivo'];
+                $file_path = get_attached_file($file_id);
+    
+                if ($file_path && file_exists($file_path)) {
+                    // Forzar la descarga del archivo
+                    header('Content-Description: File Transfer');
+                    header('Content-Type: application/octet-stream');
+                    header('Content-Disposition: attachment; filename="' . basename($file_path) . '"');
+                    header('Expires: 0');
+                    header('Cache-Control: must-revalidate');
+                    header('Pragma: public');
+                    header('Content-Length: ' . filesize($file_path));
+                    readfile($file_path);
+                    exit;
+                } else {
+                    wp_die(__('Archivo no encontrado', 'progresi-obras'), 404);
+                }
+            } else {
+                wp_die(__('Acceso no autorizado', 'progresi-obras'), 403);
             }
         }
+    }
+    
+    private function validar_clave_dossier($post_id, $clave) {
+        $clave_almacenada = carbon_get_post_meta($post_id, 'dossier_clave');
+        return empty($clave_almacenada) || $clave === $clave_almacenada;
+    }
+    
+    public function verificar_clave_dossier() {
+        check_ajax_referer('seguridad_dossier', 'nonce');
+    
+        $post_id = intval($_POST['post_id']);
+        $clave = sanitize_text_field($_POST['clave']);
+    
+        if ($this->validar_clave_dossier($post_id, $clave)) {
+            // Obtener el archivo del dossier
+            $dossier_archivos = carbon_get_post_meta($post_id, 'dossier_archivos');
+    
+            if (!empty($dossier_archivos)) {
+                // Obtener el primer archivo del dossier (asumiendo que solo hay uno)
+                $dossier = $dossier_archivos[0];
+                $file_id = $dossier['archivo'];
+                $file_url = wp_get_attachment_url($file_id);
+    
+                if ($file_url) {
+                    wp_send_json_success(['url' => $file_url]);
+                } else {
+                    wp_send_json_error(['message' => __('Archivo no encontrado', 'progresi-obras')]);
+                }
+            } else {
+                wp_send_json_error(['message' => __('No se encontró el archivo adjunto', 'progresi-obras')]);
+            }
+        } else {
+            wp_send_json_error(['message' => __('Clave incorrecta', 'progresi-obras')]);
+        }
+    }
+
+    public function verificar_dependencias() {
+        if (!class_exists('\Carbon_Fields\Carbon_Fields')) {
+            add_action('admin_notices', function() {
+                echo '<div class="error"><p>';
+                printf(
+                    __('Se requiere Carbon Fields para el plugin de obras. Instala con: %s', 'progresi-obras'),
+                    '<code>composer require htmlburger/carbon-fields</code>'
+                );
+                echo '</p></div>';
+            });
+        }
+    }
+
+    public function registrar_estructura() {
+        // Registrar CPT Obra
+        register_post_type('obra', $this->config_cpt());
         
-        wp_die('Acceso no autorizado', 'Error de autenticación', ['response' => 403]);
+        // Registrar Taxonomía Temporadas
+        register_taxonomy('temporada', 'obra', $this->config_taxonomia());
     }
-}
 
-// En la función de validación actualiza:
-function validar_clave_dossier($post_id, $clave) {
-  $clave_almacenada = carbon_get_post_meta($post_id, 'dossier_clave');
-  
-  // Si no hay clave configurada, permitir acceso
-  if (empty($clave_almacenada)) {
-      return true;
-  }
-  
-  // Si hay clave, verificar coincidencia
-  return $clave === $clave_almacenada;
-}
-
-function verificar_clave_dossier() {
-    check_ajax_referer('seguridad_dossier', 'nonce');
-    
-    $post_id = intval($_POST['post_id']);
-    $clave = sanitize_text_field($_POST['clave']);
-    
-    if (validar_clave_dossier($post_id, $clave)) {
-        wp_send_json_success([
-            'url' => add_query_arg([
-                'descargar_dossier' => 1,
-                'post_id' => $post_id,
-                'clave' => $clave
-            ], home_url('/'))
-        ]);
+    private function config_cpt() {
+        return [
+            'labels' => [
+                'name' => __('Obras', 'progresi-obras'),
+                'singular_name' => __('Obra', 'progresi-obras'),
+                'menu_name' => __('Obras', 'progresi-obras'),
+                'all_items' => __('Todas las Obras', 'progresi-obras'),
+            ],
+            'public' => true,
+            'has_archive' => true,
+            'rewrite' => ['slug' => 'obras'],
+            'supports' => ['title', 'thumbnail', 'excerpt', 'custom-fields'],
+            'show_in_rest' => true,
+            'taxonomies' => ['temporada'],
+            'menu_icon' => 'dashicons-tickets-alt',
+        ];
     }
-    
-    wp_send_json_error('Contraseña incorrecta');
-}
 
-// 4. Compatibilidad con Elementor
-add_action('elementor/theme/register_locations', 'registrar_elementor_locations');
-add_filter('elementor_pro/utils/post_type_supports_elementor', 'habilitar_elementor_para_obra', 10, 2);
-
-function registrar_elementor_locations($elementor_theme_manager) {
-    $elementor_theme_manager->register_all_core_location();
-}
-
-function habilitar_elementor_para_obra($supports, $post_type) {
-    if ('obra' === $post_type) {
-        $supports = true;
+    private function config_taxonomia() {
+        return [
+            'labels' => [
+                'name' => __('Temporadas', 'progresi-obras'),
+                'singular_name' => __('Temporada', 'progresi-obras'),
+                'search_items' => __('Buscar Temporadas', 'progresi-obras'),
+                'all_items' => __('Todas las Temporadas', 'progresi-obras'),
+            ],
+            'hierarchical' => false,
+            'show_admin_column' => true,
+            'rewrite' => ['slug' => 'temporadas'],
+            'show_in_rest' => true,
+        ];
     }
-    return $supports;
-}
 
-// 5. Shortcodes actualizados
-add_shortcode('obra_meta', 'shortcode_obra_meta');
-add_shortcode('obra_ficha', 'shortcode_obra_ficha');
-add_shortcode('obra_descarga_pdf', 'shortcode_descarga_pdf');
-
-function shortcode_obra_meta($atts) {
-    $atts = shortcode_atts(['field' => ''], $atts);
-    return carbon_get_post_meta(get_the_ID(), $atts['field']);
-}
-
-function shortcode_obra_ficha() {
-    $ficha = carbon_get_post_meta(get_the_ID(), 'ficha_artistica');
-    if (empty($ficha)) return '';
-
-    $output = '<div class="ficha-artistica elementor-grid">';
-    foreach ($ficha as $miembro) {
-        $output .= sprintf(
-            '<div class="miembro"><h4>%s</h4><p>%s</p></div>',
-            esc_html($miembro['rol']),
-            esc_html($miembro['nombre'])
-        );
+    public function registrar_campos() {
+        Container::make('post_meta', __('Detalles de la Obra', 'progresi-obras'))
+            ->where('post_type', '=', 'obra')
+            ->add_tab(__('Información Básica', 'progresi-obras'), [
+                Field::make('text', 'genero', __('Género', 'progresi-obras'))
+                    ->set_required(true)
+                    ->set_width(30),
+                    
+                Field::make('text', 'autor', __('Autor', 'progresi-obras'))
+                    ->set_required(true)
+                    ->set_width(30),
+                    
+                Field::make('date', 'fecha_estreno', __('Estreno', 'progresi-obras'))
+                    ->set_storage_format('Y-m-d')
+                    ->set_width(20),
+                    
+                Field::make('date', 'fecha_finalizacion', __('Finalización', 'progresi-obras'))
+                    ->set_storage_format('Y-m-d')
+                    ->set_width(20),
+                    
+                Field::make('rich_text', 'sinopsis', __('Sinopsis', 'progresi-obras'))
+                    ->set_required(true),
+                    
+                Field::make('rich_text', 'presentacion', __('Presentación', 'progresi-obras')),
+            ])
+            ->add_tab(__('Multimedia', 'progresi-obras'), [
+                Field::make('media_gallery', 'galeria', __('Galería de Fotos', 'progresi-obras'))
+                    ->set_type('image')
+                    ->set_duplicates_allowed(false),
+                    
+                Field::make('complex', 'videos', __('Videos', 'progresi-obras'))
+                    ->add_fields([
+                        Field::make('text', 'titulo', __('Título del Video'))
+                            ->set_width(30),
+                        Field::make('oembed', 'url', __('URL del Video'))
+                            ->set_width(70),
+                    ])
+                    ->set_layout('tabbed-horizontal')
+            ])
+            ->add_tab(__('Documentación', 'progresi-obras'), [
+                Field::make('complex', 'dossier_archivos', __('Archivos del Dossier', 'progresi-obras'))
+                    ->add_fields([
+                        Field::make('file', 'archivo', __('Archivo PDF', 'progresi-obras'))
+                            ->set_type('application/pdf')
+                            ->set_required(true),
+                    ])
+                    ->set_layout('tabbed-horizontal')
+                    ->set_header_template('
+                        <% if (archivo) { %>
+                            Archivo: <%= archivo.split("/").pop() %>
+                        <% } %>
+                    '),
+                    
+                Field::make('text', 'dossier_clave', __('Contraseña de acceso', 'progresi-obras'))
+                    ->set_attribute('type', 'password')
+                    ->help_text(__('Clave única para todos los archivos del dossier', 'progresi-obras')),
+            ])
+            ->add_tab(__('Ficha Artística', 'progresi-obras'), [
+                Field::make('complex', 'ficha_artistica', __('Equipo Técnico', 'progresi-obras'))
+                    ->add_fields([
+                        Field::make('text', 'rol', __('Rol'))
+                            ->set_width(30),
+                        Field::make('text', 'nombre', __('Nombre'))
+                            ->set_width(70),
+                    ])
+                    ->set_layout('tabbed-horizontal')
+                    ->set_header_template('<%- rol %>')
+            ]);
     }
-    return $output . '</div>';
-}
 
-// Modifica el shortcode para manejar ambos casos:
-  function shortcode_descarga_pdf() {
-    $post_id = get_the_ID();
-    $tiene_clave = !empty(carbon_get_post_meta($post_id, 'dossier_clave'));
-    $file_id = carbon_get_post_meta($post_id, 'dossier');
+    public function manejar_templates($template) {
+        if (is_post_type_archive('obra')) {
+            return plugin_dir_path(__FILE__) . 'templates/archive-obra.php';
+        }
+        
+        if (is_singular('obra')) {
+            return plugin_dir_path(__FILE__) . 'templates/single-obra.php';
+        }
+        
+        return $template;
+    }
+
+    public function cargar_recursos() {
+        if (is_singular('obra')) {
+            wp_enqueue_style(
+                'bootstrap5-css',
+                'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+                [],
+                '5.3.3'
+            );
     
-    if (!$file_id) return ''; // No hay PDF subido
-
-    ob_start();
-    ?>
-    <div class="descarga-pdf-protected">
-        <?php if ($tiene_clave) : ?>
-            <form class="form-descarga-pdf" data-post-id="<?php echo $post_id; ?>">
-                <div class="form-group">
-                    <input type="password" name="clave" placeholder="Ingrese la clave del documento" required>
-                    <button type="submit" class="elementor-button">Desbloquear PDF</button>
-                </div>
-                <div class="descarga-feedback"></div>
-            </form>
-        <?php else : ?>
-            <a href="<?php echo wp_get_attachment_url($file_id); ?>" 
-               class="descarga-directa elementor-button" 
-               download>
-                Descargar Dossier
-            </a>
-        <?php endif; ?>
-    </div>
-    <?php
-    return ob_get_clean();
-}
-
-// Filtrar las plantillas para el CPT 'obra'
-add_filter('template_include', 'custom_obra_templates', 99);
-
-function custom_obra_templates($template) {
-    // Template para un post individual (single-obra.php)
-    if (is_singular('obra') && !defined('ELEMENTOR_PRO_VERSION')) {
-        $single_template = plugin_dir_path(__FILE__) . 'templates/single-obra.php';
-        if (file_exists($single_template)) {
-            return $single_template;
+            wp_enqueue_script(
+                'bootstrap5-js',
+                'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+                [],
+                '5.3.3',
+                true
+            );
+    
+            wp_enqueue_style(
+                'progresi-obras',
+                plugins_url('assets/css/obras.css', __FILE__),
+                [],
+                filemtime(plugin_dir_path(__FILE__) . 'assets/css/obras.css')
+            );
+    
+            wp_enqueue_script(
+                'progresi-obras',
+                plugins_url('assets/js/obras.js', __FILE__),
+                ['jquery'],
+                filemtime(plugin_dir_path(__FILE__) . 'assets/js/obras.js'),
+                true
+            );
         }
     }
-
-    // Template para el archivo (archive-obra.php)
-    if (is_post_type_archive('obra') && !defined('ELEMENTOR_PRO_VERSION')) {
-        $archive_template = plugin_dir_path(__FILE__) . 'templates/archive-obra.php';
-        if (file_exists($archive_template)) {
-            return $archive_template;
-        }
-    }
-
-    return $template; // Si no se cumple ninguna condición, usa la plantilla predeterminada
+    
 }
 
-add_action('wp_enqueue_scripts', 'obras_scripts');
-function obras_scripts() {
-    // CSS
-    wp_enqueue_style(
-        'obras-css', 
-        plugins_url('assets/css/obras.css', __FILE__),
-        [],
-        filemtime(plugin_dir_path(__FILE__) . 'assets/css/obras.css')
-    );
+// Inicialización
+add_action('plugins_loaded', function() {
+    Carbon_Fields::boot();
+    new Plugin();
+});
 
-    // JS
-    wp_enqueue_script(
-        'obras-js',
-        plugins_url('assets/js/obras.js', __FILE__),
-        ['jquery'],
-        filemtime(plugin_dir_path(__FILE__) . 'assets/js/obras.js'),
-        true
-    );
-
-    // Localización
-    wp_localize_script('obras-js', 'obrasData', [
-        'ajaxurl' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('seguridad_dossier')
-    ]);
-}
