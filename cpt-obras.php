@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Gestión de Obras Teatrales
  * Description: Sistema completo para gestión de obras con taxonomías y plantillas optimizadas
- * Version: 2.1
+ * Version: 3.0
  * Author: Progresi
  * Text Domain: progresi-obras
  * License: GPLv2 or later
@@ -147,7 +147,7 @@ class Plugin {
                 'search_items' => __('Buscar Temporadas', 'progresi-obras'),
                 'all_items' => __('Todas las Temporadas', 'progresi-obras'),
             ],
-            'hierarchical' => false,
+            'hierarchical' => false, // Importante: false para términos planos
             'show_admin_column' => true,
             'rewrite' => ['slug' => 'temporadas'],
             'show_in_rest' => true,
@@ -212,15 +212,7 @@ class Plugin {
                     ->help_text(__('Clave única para todos los archivos del dossier', 'progresi-obras')),
             ])
             ->add_tab(__('Ficha Artística', 'progresi-obras'), [
-                Field::make('complex', 'ficha_artistica', __('Equipo Técnico', 'progresi-obras'))
-                    ->add_fields([
-                        Field::make('text', 'rol', __('Rol'))
-                            ->set_width(30),
-                        Field::make('text', 'nombre', __('Nombre'))
-                            ->set_width(70),
-                    ])
-                    ->set_layout('tabbed-horizontal')
-                    ->set_header_template('<%- rol %>')
+                Field::make('rich_text', 'ficha_artistica', __('Equipo Técnico', 'progresi-obras')),
             ]);
     }
 
@@ -267,10 +259,53 @@ class Plugin {
                 filemtime(plugin_dir_path(__FILE__) . 'assets/js/obras.js'),
                 true
             );
+
+            wp_enqueue_script(
+                'masonry',
+                'https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js',
+                ['jquery'],
+                '4.2.2',
+                true
+            );
+
+             // 🔥 Pasar variables PHP a JavaScript
+            wp_localize_script(
+                'progresi-obras',  // Mismo handle que usaste en wp_enqueue_script()
+                'progresiObrasVars', // Objeto JS que contendrá las variables
+                [
+                    'ajax_url' => admin_url('admin-ajax.php'),
+                    'nonce'    => wp_create_nonce('seguridad_dossier'),
+                ]
+            );
+        }
+
+        // Carga recursos SOLO en el archive de 'obra'
+        if (is_post_type_archive('obra')) {
+            wp_enqueue_style(
+                'bootstrap5-css',
+                'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+                [],
+                '5.3.3'
+            );
+    
+            wp_enqueue_script(
+                'bootstrap5-js',
+                'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+                [],
+                '5.3.3',
+                true
+            );
+            wp_enqueue_style(
+                'progresi-obras-archive',
+                plugins_url('assets/css/archive.css', __FILE__),
+                [],
+                filemtime(plugin_dir_path(__FILE__) . 'assets/css/archive.css')
+            );
         }
     }
     
 }
+
 
 // Inicialización
 add_action('plugins_loaded', function() {

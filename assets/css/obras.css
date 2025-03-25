@@ -153,3 +153,98 @@
 .btn-archive-dossier:hover {
   background-color: #8d111a;
 }
+
+/**
+* css sidebar
+*/
+
+/* Estilo general del ticket */
+.ticket-card {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 auto 2rem;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  border-top: 4px solid #8d111a;
+}
+
+/* Cabecera del ticket */
+.ticket-header {
+  padding: 1rem 1.5rem;
+  background: #333;
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Cuerpo del ticket */
+.ticket-body {
+  padding: 1.5rem;
+  border: 2px dashed #e0e0e0;
+  border-top: none;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  background: #f9f9f9;
+}
+
+.ticket-body p {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.ticket-body p:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* Quita el fondo azul cuando está expandido */
+.accordion-button:not(.collapsed) {
+  background-color: transparent; /* Fondo transparente */
+  box-shadow: none; /* Elimina sombra */
+}
+
+/* Quita el fondo gris cuando está contraído */
+.accordion-button {
+  background-color: transparent; /* Fondo transparente */
+}
+
+/* Elimina el efecto de focus azul */
+.accordion-button:focus {
+  box-shadow: none;
+  border-color: rgba(0, 0, 0, 0.125);
+}
+
+/* Opcional: Estilo hover sutil */
+.accordion-button:hover {
+  background-color: #f8f9fa; /* Gris muy claro al pasar mouse */
+}
+
+.accordion-button:focus-visible {
+  outline: 2px solid #333;
+  outline-offset: 2px;
+}
+
+#obraAccordion .accordion-button:hover {
+  background-color: #7e0910 !important;
+}
+.accordion-button .collapsed {
+  background-color: #7e0910 !important;
+  color: #000;
+}
+.accordion-button .collapsed::selection {
+  background-color: #7e0910 !important;
+}
+.accordion-button:not(.collapsed) {
+  background-color: #7e0910;
+  color: #fff;
+}
+.accordion-button:focus {
+  background-color: #7e0910;
+}

@@ -45,38 +45,39 @@ $ficha_artistica    = carbon_get_post_meta(get_the_ID(), 'ficha_artistica');
 
                 <!-- Secciones con Accordion Bootstrap -->
                 <div class="accordion mb-5" id="obraAccordion">
+                    
+                    <!-- Presentación -->
+                    <?php if ($presentacion): ?>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingPresentacion">
+                            <button class="accordion-button " type="button" data-bs-toggle="collapse" data-bs-target="#collapsePresentacion" aria-expanded="true">
+                                Presentación
+                            </button>
+                        </h2>
+                        <div id="collapsePresentacion" class="accordion-collapse collapse show" data-bs-parent="#obraAccordion">
+                            <div class="accordion-body">
+                                <?php echo wpautop(wp_kses_post($presentacion)); ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Sinopsis -->
                     <?php if ($sinopsis): ?>
                     <div class="accordion-item">
                         <h2 class="accordion-header" id="headingSinopsis">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSinopsis" aria-expanded="true">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSinopsis" aria-expanded="false">
                                 Sinopsis
                             </button>
                         </h2>
-                        <div id="collapseSinopsis" class="accordion-collapse collapse show" data-bs-parent="#obraAccordion">
+                        <div id="collapseSinopsis" class="accordion-collapse collapse" data-bs-parent="#obraAccordion">
                             <div class="accordion-body">
-                                <?php echo wp_kses_post($sinopsis); ?>
+                                <?php echo wpautop(wp_kses_post($sinopsis)); ?>
                             </div>
                         </div>
                     </div>
                     <?php endif; ?>
 
-                    <!-- Presentación -->
-                    <?php if ($presentacion): ?>
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingPresentacion">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePresentacion" aria-expanded="false">
-                                Presentación
-                            </button>
-                        </h2>
-                        <div id="collapsePresentacion" class="accordion-collapse collapse" data-bs-parent="#obraAccordion">
-                            <div class="accordion-body">
-                                <?php echo wp_kses_post($presentacion); ?>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
 
                     <!-- Ficha Artística -->
                     <?php if (!empty($ficha_artistica)): ?>
@@ -88,13 +89,7 @@ $ficha_artistica    = carbon_get_post_meta(get_the_ID(), 'ficha_artistica');
                         </h2>
                         <div id="collapseFicha" class="accordion-collapse collapse" data-bs-parent="#obraAccordion">
                             <div class="accordion-body">
-                                <ul class="list-group">
-                                    <?php foreach ($ficha_artistica as $persona): ?>
-                                        <li class="list-group-item">
-                                            <strong><?php echo esc_html($persona['rol']); ?>:</strong> <?php echo esc_html($persona['nombre']); ?>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
+                                <?php echo wpautop(wp_kses_post($ficha_artistica)); ?>
                             </div>
                         </div>
                     </div>
@@ -102,38 +97,8 @@ $ficha_artistica    = carbon_get_post_meta(get_the_ID(), 'ficha_artistica');
 
                 </div> <!-- /accordion -->
 
-                <!-- Galería de Fotos -->
-                <?php if (!empty($galeria)): ?>
-                    <section class="mb-5">
-                        <h2 class="fw-bolder mb-3">Galería de Fotos</h2>
-                        <div class="row g-3">
-                            <?php foreach ($galeria as $image_id): 
-                                $image_url = wp_get_attachment_image_url($image_id, 'large'); ?>
-                                <div class="col-md-4">
-                                    <img src="<?php echo esc_url($image_url); ?>" class="img-fluid rounded shadow-sm" alt="Galería">
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </section>
-                <?php endif; ?>
-
-                <!-- Videos -->
-                <?php if (!empty($videos)): ?>
-                    <section class="mb-5">
-                        <h2 class="fw-bolder mb-3">Videos</h2>
-                        <?php foreach ($videos as $video): ?>
-                            <div class="mb-4">
-                                <h5><?php echo esc_html($video['titulo']); ?></h5>
-                                <div class="ratio ratio-16x9">
-                                    <?php echo wp_oembed_get($video['url']); ?>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </section>
-                <?php endif; ?>
-
-                <!-- Dossier -->
-                <?php if (!empty($dossier_archivos)): ?>
+                 <!-- Dossier -->
+                 <?php if (!empty($dossier_archivos)): ?>
                     <section class="mb-5">
                         <h2 class="fw-bolder mb-3">Documentación / Dossier</h2>
                         <ul class="list-group">
@@ -160,15 +125,44 @@ $ficha_artistica    = carbon_get_post_meta(get_the_ID(), 'ficha_artistica');
                     </section>
                 <?php endif; ?>
 
+                <?php if (!empty($galeria)): ?>
+                    <section class="mb-5">
+                        <h2 class="fw-bolder mb-3">Galería de Fotos</h2>
+                        <div class="row g-3" data-masonry='{"percentPosition": true}'>
+                            <?php foreach ($galeria as $image_id): 
+                                $image_url = wp_get_attachment_image_url($image_id, 'large'); ?>
+                                <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                    <img src="<?php echo esc_url($image_url); ?>" class="img-fluid rounded shadow-sm w-100" alt="Galería">
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+                <?php endif; ?>
+
+                <!-- Videos -->
+                <?php if (!empty($videos)): ?>
+                    <section class="mb-5">
+                        <h2 class="fw-bolder mb-3">Videos</h2>
+                        <?php foreach ($videos as $video): ?>
+                            <div class="mb-4">
+                                <h5><?php echo esc_html($video['titulo']); ?></h5>
+                                <div class="ratio ratio-16x9">
+                                    <?php echo wp_oembed_get($video['url']); ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </section>
+                <?php endif; ?>
+
             </article>
         </div> <!-- /col-lg-8 -->
 
         <!-- Sidebar -->
         <div class="col-lg-4">
-            <!-- Side widget -->
-            <div class="card mb-4">
-                <div class="card-header">Detalles de la Obra</div>
-                <div class="card-body">
+        <!-- Ticket Widget -->
+        <div class="ticket-card">
+                <div class="ticket-header">Detalles de la Obra</div>
+                <div class="ticket-body">
                     <p><strong>Género:</strong> <?php echo esc_html($genero); ?></p>
                     <p><strong>Autor:</strong> <?php echo esc_html($autor); ?></p>
                     <p><strong>Estreno:</strong> <?php echo esc_html($fecha_estreno); ?></p>
@@ -179,40 +173,5 @@ $ficha_artistica    = carbon_get_post_meta(get_the_ID(), 'ficha_artistica');
     </div> <!-- /row -->
 </div> <!-- /container -->
 
-<!-- Script para manejar la descarga del dossier -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const forms = document.querySelectorAll('.dossier-form');
-    forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const postId = form.getAttribute('data-post-id');
-            const clave = form.querySelector('input[type="password"]').value;
 
-            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'verificar_clave_dossier',
-                    post_id: postId,
-                    clave: clave,
-                    nonce: '<?php echo wp_create_nonce('seguridad_dossier'); ?>'
-                }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Redirigir a la URL de descarga
-                    window.location.href = data.data.url;
-                } else {
-                    alert(data.data.message || 'Clave incorrecta');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        });
-    });
-});
-</script>
 <?php get_footer(); ?>
