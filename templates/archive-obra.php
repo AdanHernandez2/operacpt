@@ -19,7 +19,7 @@ get_header();
     if (!empty($temporadas) && !is_wp_error($temporadas)) :
         foreach ($temporadas as $temporada) :
             // Verificar si el término es un rango válido (ej: 2023-2024)
-            if (preg_match('/^\d{4}-\d{4}$/', $temporada->name)) :
+            if (preg_match('/^\d{4}\s*-\s*\d{4}$/', $temporada->name)) :
                 ?>
                 <section class="temporada-section mb-5">
                     <h2 class="display-5 mb-4">Temporada <?php echo esc_html($temporada->name); ?></h2>
