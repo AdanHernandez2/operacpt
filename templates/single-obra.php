@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Template para single de Obras Teatrales - Versión Mejorada
  */
@@ -45,64 +46,64 @@ $ficha_artistica    = carbon_get_post_meta(get_the_ID(), 'ficha_artistica');
 
                 <!-- Secciones con Accordion Bootstrap -->
                 <div class="accordion mb-5" id="obraAccordion">
-                    
+
                     <!-- Presentación -->
                     <?php if ($presentacion): ?>
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingPresentacion">
-                            <button class="accordion-button " type="button" data-bs-toggle="collapse" data-bs-target="#collapsePresentacion" aria-expanded="true">
-                                Presentación
-                            </button>
-                        </h2>
-                        <div id="collapsePresentacion" class="accordion-collapse collapse show" data-bs-parent="#obraAccordion">
-                            <div class="accordion-body">
-                                <?php echo wpautop(wp_kses_post($presentacion)); ?>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingPresentacion">
+                                <button class="accordion-button " type="button" data-bs-toggle="collapse" data-bs-target="#collapsePresentacion" aria-expanded="true">
+                                    Presentación
+                                </button>
+                            </h2>
+                            <div id="collapsePresentacion" class="accordion-collapse collapse show" data-bs-parent="#obraAccordion">
+                                <div class="accordion-body">
+                                    <?php echo wpautop(wp_kses_post($presentacion)); ?>
+                                </div>
                             </div>
                         </div>
-                    </div>
                     <?php endif; ?>
 
                     <!-- Sinopsis -->
                     <?php if ($sinopsis): ?>
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingSinopsis">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSinopsis" aria-expanded="false">
-                                Sinopsis
-                            </button>
-                        </h2>
-                        <div id="collapseSinopsis" class="accordion-collapse collapse" data-bs-parent="#obraAccordion">
-                            <div class="accordion-body">
-                                <?php echo wpautop(wp_kses_post($sinopsis)); ?>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingSinopsis">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSinopsis" aria-expanded="false">
+                                    Sinopsis
+                                </button>
+                            </h2>
+                            <div id="collapseSinopsis" class="accordion-collapse collapse" data-bs-parent="#obraAccordion">
+                                <div class="accordion-body">
+                                    <?php echo wpautop(wp_kses_post($sinopsis)); ?>
+                                </div>
                             </div>
                         </div>
-                    </div>
                     <?php endif; ?>
 
 
                     <!-- Ficha Artística -->
                     <?php if (!empty($ficha_artistica)): ?>
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingFicha">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFicha" aria-expanded="false">
-                                Ficha Artística
-                            </button>
-                        </h2>
-                        <div id="collapseFicha" class="accordion-collapse collapse" data-bs-parent="#obraAccordion">
-                            <div class="accordion-body">
-                                <?php echo wpautop(wp_kses_post($ficha_artistica)); ?>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingFicha">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFicha" aria-expanded="false">
+                                    Ficha Artística
+                                </button>
+                            </h2>
+                            <div id="collapseFicha" class="accordion-collapse collapse" data-bs-parent="#obraAccordion">
+                                <div class="accordion-body">
+                                    <?php echo wpautop(wp_kses_post($ficha_artistica)); ?>
+                                </div>
                             </div>
                         </div>
-                    </div>
                     <?php endif; ?>
 
                 </div> <!-- /accordion -->
 
-                 <!-- Dossier -->
-                 <?php if (!empty($dossier_archivos)): ?>
+                <!-- Dossier -->
+                <?php if (!empty($dossier_archivos)): ?>
                     <section class="mb-5">
                         <h2 class="fw-bolder mb-3">Documentación / Dossier</h2>
                         <ul class="list-group">
-                            <?php foreach ($dossier_archivos as $dossier): 
+                            <?php foreach ($dossier_archivos as $dossier):
                                 $file_url = wp_get_attachment_url($dossier['archivo']);
                                 $file_name = basename($file_url); ?>
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -129,7 +130,7 @@ $ficha_artistica    = carbon_get_post_meta(get_the_ID(), 'ficha_artistica');
                     <section class="mb-5">
                         <h2 class="fw-bolder mb-3">Galería de Fotos</h2>
                         <div class="row g-3" data-masonry='{"percentPosition": true}'>
-                            <?php foreach ($galeria as $image_id): 
+                            <?php foreach ($galeria as $image_id):
                                 $image_url = wp_get_attachment_image_url($image_id, 'large'); ?>
                                 <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
                                     <img src="<?php echo esc_url($image_url); ?>" class="img-fluid rounded shadow-sm w-100" alt="Galería">
@@ -159,14 +160,18 @@ $ficha_artistica    = carbon_get_post_meta(get_the_ID(), 'ficha_artistica');
 
         <!-- Sidebar -->
         <div class="col-lg-4">
-        <!-- Ticket Widget -->
-        <div class="ticket-card">
+            <!-- Ticket Widget -->
+            <div class="ticket-card">
                 <div class="ticket-header">Detalles de la Obra</div>
                 <div class="ticket-body">
                     <p><strong>Género:</strong> <?php echo esc_html($genero); ?></p>
                     <p><strong>Autor:</strong> <?php echo esc_html($autor); ?></p>
-                    <p><strong>Estreno:</strong> <?php echo esc_html($fecha_estreno); ?></p>
-                    <p><strong>Finalización:</strong> <?php echo esc_html($fecha_finalizacion); ?></p>
+                    <?php if (!empty($fecha_estreno)): ?>
+                        <p><strong>Estreno:</strong> <?php echo esc_html($fecha_estreno); ?></p>
+                    <?php endif; ?>
+                    <?php if (!empty($fecha_finalizacion)): ?>
+                        <p><strong>Finalización:</strong> <?php echo esc_html($fecha_finalizacion); ?></p>
+                    <?php endif; ?>
                 </div>
             </div>
         </div> <!-- /col-lg-4 -->

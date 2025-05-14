@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Plugin Name: Gestión de Obras Teatrales
  * Description: Sistema completo para gestión de obras con taxonomías y plantillas optimizadas
- * Version: 3.1
+ * Version: 3.3
  * Author: Progresi
  * Text Domain: progresi-obras
  * License: GPLv2 or later
@@ -19,8 +20,10 @@ use Carbon_Fields\Carbon_Fields;
 use Carbon_Fields\Container;
 use Carbon_Fields\Field;
 
-class Plugin {
-    public function __construct() {
+class Plugin
+{
+    public function __construct()
+    {
         add_action('plugins_loaded', [$this, 'verificar_dependencias']);
         add_action('init', [$this, 'registrar_estructura']);
         add_action('carbon_fields_register_fields', [$this, 'registrar_campos']);
@@ -30,22 +33,23 @@ class Plugin {
         add_action('wp_ajax_verificar_clave_dossier', [$this, 'verificar_clave_dossier']);
         add_action('wp_ajax_nopriv_verificar_clave_dossier', [$this, 'verificar_clave_dossier']);
     }
-    
-    public function manejar_descargas_protegidas() {
+
+    public function manejar_descargas_protegidas()
+    {
         if (isset($_GET['descargar_dossier'], $_GET['post_id'])) {
             $post_id = intval($_GET['post_id']);
             $clave = sanitize_text_field($_GET['clave'] ?? '');
-    
+
             // Verificar si la clave es válida
             $clave_valida = $this->validar_clave_dossier($post_id, $clave);
             $dossier_archivos = carbon_get_post_meta($post_id, 'dossier_archivos');
-    
+
             if ($clave_valida && !empty($dossier_archivos)) {
                 // Obtener el primer archivo del dossier (asumiendo que solo hay uno)
                 $dossier = $dossier_archivos[0];
                 $file_id = $dossier['archivo'];
                 $file_path = get_attached_file($file_id);
-    
+
                 if ($file_path && file_exists($file_path)) {
                     // Forzar la descarga del archivo
                     header('Content-Description: File Transfer');
@@ -65,28 +69,30 @@ class Plugin {
             }
         }
     }
-    
-    private function validar_clave_dossier($post_id, $clave) {
+
+    private function validar_clave_dossier($post_id, $clave)
+    {
         $clave_almacenada = carbon_get_post_meta($post_id, 'dossier_clave');
         return empty($clave_almacenada) || $clave === $clave_almacenada;
     }
-    
-    public function verificar_clave_dossier() {
+
+    public function verificar_clave_dossier()
+    {
         check_ajax_referer('seguridad_dossier', 'nonce');
-    
+
         $post_id = intval($_POST['post_id']);
         $clave = sanitize_text_field($_POST['clave']);
-    
+
         if ($this->validar_clave_dossier($post_id, $clave)) {
             // Obtener el archivo del dossier
             $dossier_archivos = carbon_get_post_meta($post_id, 'dossier_archivos');
-    
+
             if (!empty($dossier_archivos)) {
                 // Obtener el primer archivo del dossier (asumiendo que solo hay uno)
                 $dossier = $dossier_archivos[0];
                 $file_id = $dossier['archivo'];
                 $file_url = wp_get_attachment_url($file_id);
-    
+
                 if ($file_url) {
                     wp_send_json_success(['url' => $file_url]);
                 } else {
@@ -100,9 +106,10 @@ class Plugin {
         }
     }
 
-    public function verificar_dependencias() {
+    public function verificar_dependencias()
+    {
         if (!class_exists('\Carbon_Fields\Carbon_Fields')) {
-            add_action('admin_notices', function() {
+            add_action('admin_notices', function () {
                 echo '<div class="error"><p>';
                 printf(
                     __('Se requiere Carbon Fields para el plugin de obras. Instala con: %s', 'progresi-obras'),
@@ -113,15 +120,17 @@ class Plugin {
         }
     }
 
-    public function registrar_estructura() {
+    public function registrar_estructura()
+    {
         // Registrar CPT Obra
         register_post_type('obra', $this->config_cpt());
-        
+
         // Registrar Taxonomía Temporadas
         register_taxonomy('temporada', 'obra', $this->config_taxonomia());
     }
 
-    private function config_cpt() {
+    private function config_cpt()
+    {
         return [
             'labels' => [
                 'name' => __('Obras', 'progresi-obras'),
@@ -139,7 +148,8 @@ class Plugin {
         ];
     }
 
-    private function config_taxonomia() {
+    private function config_taxonomia()
+    {
         return [
             'labels' => [
                 'name' => __('Temporadas', 'progresi-obras'),
@@ -154,36 +164,37 @@ class Plugin {
         ];
     }
 
-    public function registrar_campos() {
+    public function registrar_campos()
+    {
         Container::make('post_meta', __('Detalles de la Obra', 'progresi-obras'))
             ->where('post_type', '=', 'obra')
             ->add_tab(__('Información Básica', 'progresi-obras'), [
                 Field::make('text', 'genero', __('Género', 'progresi-obras'))
                     ->set_required(true)
                     ->set_width(30),
-                    
+
                 Field::make('text', 'autor', __('Autor', 'progresi-obras'))
                     ->set_required(true)
                     ->set_width(30),
-                    
+
                 Field::make('date', 'fecha_estreno', __('Estreno', 'progresi-obras'))
                     ->set_storage_format('Y-m-d')
                     ->set_width(20),
-                    
+
                 Field::make('date', 'fecha_finalizacion', __('Finalización', 'progresi-obras'))
                     ->set_storage_format('Y-m-d')
                     ->set_width(20),
-                    
+
                 Field::make('rich_text', 'sinopsis', __('Sinopsis', 'progresi-obras'))
                     ->set_required(true),
-                    
+
                 Field::make('rich_text', 'presentacion', __('Presentación', 'progresi-obras')),
             ])
             ->add_tab(__('Multimedia', 'progresi-obras'), [
                 Field::make('media_gallery', 'galeria', __('Galería de Fotos', 'progresi-obras'))
                     ->set_type('image')
                     ->set_duplicates_allowed(false),
-                    
+
                 Field::make('complex', 'videos', __('Videos', 'progresi-obras'))
                     ->add_fields([
                         Field::make('text', 'titulo', __('Título del Video'))
@@ -206,7 +217,7 @@ class Plugin {
                             Archivo: <%= archivo.split("/").pop() %>
                         <% } %>
                     '),
-                    
+
                 Field::make('text', 'dossier_clave', __('Contraseña de acceso', 'progresi-obras'))
                     ->set_attribute('type', 'password')
                     ->help_text(__('Clave única para todos los archivos del dossier', 'progresi-obras')),
@@ -216,19 +227,21 @@ class Plugin {
             ]);
     }
 
-    public function manejar_templates($template) {
+    public function manejar_templates($template)
+    {
         if (is_post_type_archive('obra')) {
             return plugin_dir_path(__FILE__) . 'templates/archive-obra.php';
         }
-        
+
         if (is_singular('obra')) {
             return plugin_dir_path(__FILE__) . 'templates/single-obra.php';
         }
-        
+
         return $template;
     }
 
-    public function cargar_recursos() {
+    public function cargar_recursos()
+    {
         if (is_singular('obra')) {
             wp_enqueue_style(
                 'bootstrap5-css',
@@ -236,7 +249,7 @@ class Plugin {
                 [],
                 '5.3.3'
             );
-    
+
             wp_enqueue_script(
                 'bootstrap5-js',
                 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
@@ -244,14 +257,14 @@ class Plugin {
                 '5.3.3',
                 true
             );
-    
+
             wp_enqueue_style(
                 'progresi-obras',
                 plugins_url('assets/css/obras.css', __FILE__),
                 [],
                 filemtime(plugin_dir_path(__FILE__) . 'assets/css/obras.css')
             );
-    
+
             wp_enqueue_script(
                 'progresi-obras',
                 plugins_url('assets/js/obras.js', __FILE__),
@@ -268,7 +281,7 @@ class Plugin {
                 true
             );
 
-             // 🔥 Pasar variables PHP a JavaScript
+            // 🔥 Pasar variables PHP a JavaScript
             wp_localize_script(
                 'progresi-obras',  // Mismo handle que usaste en wp_enqueue_script()
                 'progresiObrasVars', // Objeto JS que contendrá las variables
@@ -287,7 +300,7 @@ class Plugin {
                 [],
                 '5.3.3'
             );
-    
+
             wp_enqueue_script(
                 'bootstrap5-js',
                 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
@@ -301,15 +314,20 @@ class Plugin {
                 [],
                 filemtime(plugin_dir_path(__FILE__) . 'assets/css/archive.css')
             );
+            wp_enqueue_script(
+                'progresi-obras-archive',
+                plugins_url('assets/js/app.js', __FILE__),
+                ['jquery'],
+                filemtime(plugin_dir_path(__FILE__) . 'assets/js/app.js'),
+                true
+            );
         }
     }
-    
 }
 
 
 // Inicialización
-add_action('plugins_loaded', function() {
+add_action('plugins_loaded', function () {
     Carbon_Fields::boot();
     new Plugin();
 });
-
