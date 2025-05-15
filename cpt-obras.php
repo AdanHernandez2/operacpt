@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Gestión de Obras Teatrales
  * Description: Sistema completo para gestión de obras con taxonomías y plantillas optimizadas
- * Version: 3.4
+ * Version: 3.5
  * Author: Progresi
  * Text Domain: progresi-obras
  * License: GPLv2 or later
