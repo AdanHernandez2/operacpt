@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Gestión de Obras Teatrales
  * Description: Sistema completo para gestión de obras con taxonomías y plantillas optimizadas
- * Version: 3.5
+ * Version: 4.0
  * Author: Progresi
  * Text Domain: progresi-obras
  * License: GPLv2 or later
@@ -224,6 +224,10 @@ class Plugin
             ])
             ->add_tab(__('Ficha Artística', 'progresi-obras'), [
                 Field::make('rich_text', 'ficha_artistica', __('Equipo Técnico', 'progresi-obras')),
+            ])
+            ->add_tab(__('Orden Publicación', 'progresi-obras'), [
+                Field::make('text', 'orden_publicacion', __('Número de orden', 'progresi-obras'))
+                    ->set_attribute('type', 'number'),
             ]);
     }
 

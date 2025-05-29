@@ -21,6 +21,7 @@
         <?php
         $estreno = carbon_get_post_meta(get_the_ID(), 'fecha_estreno');
         $finalizacion = carbon_get_post_meta(get_the_ID(), 'fecha_finalizacion');
+        $ordenPublicacion = carbon_get_post_meta(get_the_ID(), 'orden_publicacion');
         ?>
         <?php if ($estreno): ?>
           <p class="card-dates">
@@ -29,6 +30,11 @@
             <?php if ($finalizacion): ?>
               - <?php echo date_i18n('j M Y', strtotime($finalizacion)); ?>
             <?php endif; ?>
+          </p>
+        <?php endif; ?>
+        <?php if ($ordenPublicacion): ?>
+          <p class="orden-publicacion" style="display:none;">
+            <?php echo esc_html($ordenPublicacion); ?>
           </p>
         <?php endif; ?>
       </div>

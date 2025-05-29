@@ -33,38 +33,71 @@ jQuery(document).ready(function ($) {
       Dec: 11,
     };
 
-    // Función para extraer la fecha más temprana
-    const getEarliestDate = (card) => {
+    // Función para extraer la última fecha del rango (fecha de finalización)
+    const getLatestDate = (card) => {
       const datesElement = card.querySelector(".card-dates");
-      if (!datesElement) return new Date(9999, 11, 31); // Fecha muy futura
+      if (!datesElement) return null;
 
       // Obtener solo el texto (ignorando elementos hijos como el icono)
       let dateText = "";
       datesElement.childNodes.forEach((node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          dateText += node.textContent;
-        }
+        if (node.nodeType === Node.TEXT_NODE) dateText += node.textContent;
       });
 
       // Extraer todas las fechas en formato "d MMM YYYY"
       const dateMatches = dateText.match(/\d{1,2} [A-Za-z]{3} \d{4}/g) || [];
-      if (dateMatches.length === 0) return new Date(9999, 11, 31);
+      if (dateMatches.length === 0) return null;
 
-      // Convertir a objetos Date y obtener la más temprana
+      // Convertir a objetos Date y obtener la última (fecha de finalización)
       const dates = dateMatches.map((dateStr) => {
         const [day, month, year] = dateStr.split(" ");
         return new Date(year, monthMap[month], day);
       });
 
-      return new Date(Math.min(...dates.map((d) => d.getTime())));
+      return dates[dates.length - 1]; // Retorna la última fecha del rango
     };
 
-    // Ordenar las tarjetas por fecha más temprana
-    cards.sort((a, b) => {
-      const dateA = getEarliestDate(a);
-      const dateB = getEarliestDate(b);
-      return dateA - dateB;
-    });
+    // Función para obtener el número de orden de publicación (si existe)
+    const getPublicationOrder = (card) => {
+      const orderElement = card.querySelector(".orden-publicacion");
+      if (!orderElement) return null;
+      const orderText = orderElement.textContent.trim();
+      return orderText ? parseInt(orderText, 10) : null;
+    };
+
+    // Separar las cards en dos grupos:
+    const cardsWithOrder = cards.filter(
+      (card) => getPublicationOrder(card) !== null
+    );
+    const cardsWithDates = cards.filter((card) => getLatestDate(card) !== null);
+
+    // **Caso 1: Solo hay cards con orden numérico → Ordenar por número**
+    if (cardsWithOrder.length > 0 && cardsWithDates.length === 0) {
+      cards.sort((a, b) => getPublicationOrder(a) - getPublicationOrder(b));
+    }
+    // **Caso 2: Solo hay cards con fechas → Ordenar por fecha de finalización**
+    else if (cardsWithOrder.length === 0 && cardsWithDates.length > 0) {
+      cards.sort((a, b) => getLatestDate(a) - getLatestDate(b));
+    }
+    // **Caso 3: Hay cards mixtas → Ordenar primero por número, luego por fecha**
+    else if (cardsWithOrder.length > 0 && cardsWithDates.length > 0) {
+      // Ordenar las que tienen número
+      const sortedByOrder = cardsWithOrder.sort(
+        (a, b) => getPublicationOrder(a) - getPublicationOrder(b)
+      );
+
+      // Ordenar las que tienen fecha (y no tienen número)
+      const cardsWithoutOrder = cards.filter(
+        (card) => getPublicationOrder(card) === null
+      );
+      const sortedByDate = cardsWithoutOrder.sort(
+        (a, b) => getLatestDate(a) - getLatestDate(b)
+      );
+
+      // Combinar los dos grupos (primero las ordenadas por número, luego por fecha)
+      cards.length = 0; // Limpiar el array original
+      cards.push(...sortedByOrder, ...sortedByDate); // Reconstruir en el orden correcto
+    }
 
     // Reorganizar las tarjetas en el DOM
     cards.forEach((card) => {
